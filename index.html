@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="hi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Star Sports 1 HD Hindi</title>
+  <title>Star Sports 1 HD Hindi - Live Player</title>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.ui.min.js" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css" crossorigin="anonymous">
+  
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -13,7 +15,7 @@
       height: 100vh;
       width: 100vw;
       overflow: hidden;
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: sans-serif;
     }
     .shaka-video-container {
       position: absolute;
@@ -24,76 +26,88 @@
     video {
       width: 100%;
       height: 100%;
-      background: #000;
       object-fit: contain;
     }
-    /* Spinner hide karne ke liye */
+    /* Spinner को छुपाने के लिए */
     .shaka-spinner-container { display: none !important; }
   </style>
 </head>
 <body>
+
   <div class="shaka-video-container" data-shaka-player>
-    <video autoplay playsinline preload="metadata"></video>
+    <video autoplay playsinline id="video"></video>
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
+      // Shaka Polyfills install करना
       shaka.polyfill.installAll();
 
       if (!shaka.Player.isBrowserSupported()) {
-        console.error('Browser not supported');
+        console.error('Browser not supported!');
         return;
       }
 
-      const video = document.querySelector('video');
+      const video = document.getElementById('video');
       const player = new shaka.Player();
       await player.attach(video);
 
       const container = document.querySelector('.shaka-video-container');
       const ui = new shaka.ui.Overlay(player, container, video);
 
+      // --- क्वालिटी बटन और UI सेटिंग्स ---
       ui.configure({
         controlPanelElements: [
-          'play_pause', 'time_and_duration', 'spacer', 'volume', 'quality', 'fullscreen'
-        ]
+          'play_pause', 
+          'time_and_duration', 
+          'spacer', 
+          'quality', // क्वालिटी बटन यहाँ है
+          'volume', 
+          'fullscreen'
+        ],
+        addQualityView: true // क्वालिटी लिस्ट दिखाने के लिए
       });
 
-      // --- Naye Details Yahan Replace Kiye Gaye Hain ---
+      // --- आपके नए डिटेल्स ---
       const streamUrl = "https://jiotvmblive.cdn.jio.com/bpk-tv/Star_Sports_HD1_Hindi_BTS/output/index.mpd";
-      const drmConfig = {
-        clearKeys: {
-          "400131994b445d8c8817202248760fda": "2d56cb6f07a75b9aff165d534ae2bfc4"
-        }
-      };
-      const cookieHeader = "__hdnea__=st=1771050752~exp=1771137152~acl=/*~hmac=3166015b213e67390aac5af7eb0bbaefcda2e7e239e7f47a54e8e6c17ec92d93";
+      const token = "st=1771137001~exp=1771223401~acl=/*~hmac=a709ae5cf502690006aee78a08fb78fbbd937f0d5206e5092cf30bcb0a4b138a";
+      const fullCookie = `__hdnea__=${token}`;
 
+      // DRM और प्लेयर कॉन्फ़िगरेशन
       player.configure({
-        drm: drmConfig,
+        drm: {
+          clearKeys: {
+            "400131994b445d8c8817202248760fda": "2d56cb6f07a75b9aff165d534ae2bfc4"
+          }
+        },
+        abr: {
+          enabled: true // Auto-Quality switch के लिए
+        },
         streaming: {
-          lowLatencyMode: true,
-          useNativeHlsOnSafari: true
+          lowLatencyMode: true
         }
       });
 
-      // Request filters for Headers & Cookies
+      // Headers और URL में टोकन जोड़ने के लिए Request Filter
       player.getNetworkingEngine().registerRequestFilter((type, request) => {
-        request.headers['Referer'] = 'https://www.jiotv.com/';
-        request.headers['User-Agent'] = "plaYtv/7.1.5 (Linux;Android 13) ExoPlayerLib/2.11.6";
-        request.headers['Cookie'] = cookieHeader;
+        // Headers (Browser में CORS के कारण शायद ब्लॉक हों)
+        request.headers['Referer'] = 'https://jiotv.com/';
+        request.headers['Origin'] = 'https://jiotv.com/';
+        request.headers['User-Agent'] = "plaYtv/7.1.3 (Linux;Android 13) ygx/824.1 ExoPlayerLib/824.0";
+        request.headers['Cookie'] = fullCookie;
 
-        // URL ke peeche cookie add karna (Auth ke liye zaroori hai)
-        if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || 
-            type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
-          const separator = request.uris[0].includes('?') ? '&' : '?';
-          request.uris[0] += separator + cookieHeader;
-        }
+        // MANIFEST और SEGMENTS के URL में टोकन जोड़ना
+        request.uris.forEach((uri, index) => {
+          const separator = uri.includes('?') ? '&' : '?';
+          request.uris[index] = `${uri}${separator}__hdnea__=${token}`;
+        });
       });
 
       try {
         await player.load(streamUrl);
-        console.log('The video has now been loaded!');
+        console.log('Video Loaded Successfully with Quality Selector!');
       } catch (e) {
-        console.error('Error loading stream', e);
+        console.error('Error loading stream:', e);
       }
     });
   </script>
