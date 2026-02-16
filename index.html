@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Star Sports HD1 Hindi</title>
+    <title>Star Sports 1 HD Hindi</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.ui.min.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css" crossorigin="anonymous">
     <style>
@@ -27,8 +27,9 @@
             background: #000;
             object-fit: contain;
         }
-        /* प्लेयर से लोडिंग स्पिनर हटाने के लिए */
-        .shaka-spinner-container, .shaka-spinner, .shaka-spinner-svg {
+        .shaka-spinner-container,
+        .shaka-spinner,
+        .shaka-spinner-svg {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
@@ -66,16 +67,15 @@
                 seekBarColors: { base: 'gold', buffered: 'gold', played: 'gold' }
             });
 
-            // --- अपडेटेड DRM Keys ---
+            // --- अपडेटेड डेटा यहाँ है ---
             let drmConfig = {
                 clearKeys: {
                     "400131994b445d8c8817202248760fda": "2d56cb6f07a75b9aff165d534ae2bfc4"
                 }
             };
-
-            // --- अपडेटेड Cookie और URL ---
-            let cookieHeader = "__hdnea__=st=1771137001~exp=1771223401~acl=/*~hmac=a709ae5cf502690006aee78a08fb78fbbd937f0d5206e5092cf30bcb0a4b138a";
+            let cookieHeader = "__hdnea__=st=1771227362~exp=1771313762~acl=/*~hmac=c4e7c9fe16d4c57551f3f2b240686ac3975a7a30403e966c503e88c484593811";
             let streamUrl = "https://jiotvmblive.cdn.jio.com/bpk-tv/Star_Sports_HD1_Hindi_BTS/output/index.mpd";
+            // -----------------------
 
             player.configure({
                 drm: drmConfig,
@@ -83,12 +83,18 @@
                     lowLatencyMode: true,
                     bufferingGoal: 15,
                     rebufferingGoal: 2,
+                    bufferBehind: 15,
+                    retryParameters: { timeout: 10000, maxAttempts: 5, baseDelay: 300, backoffFactor: 1.2 },
+                    segmentRequestTimeout: 8000,
+                    segmentPrefetchLimit: 2,
                     useNativeHlsOnSafari: true
+                },
+                manifest: {
+                    retryParameters: { timeout: 8000, maxAttempts: 3 }
                 }
             });
 
             player.getNetworkingEngine().registerRequestFilter((type, request) => {
-                // --- अपडेटेड Headers ---
                 request.headers['Referer'] = 'https://jiotv.com/';
                 request.headers['Origin'] = 'https://jiotv.com/';
                 request.headers['User-Agent'] = "plaYtv/7.1.3 (Linux;Android 13) ygx/824.1 ExoPlayerLib/824.0";
@@ -96,7 +102,7 @@
 
                 if ((type === shaka.net.NetworkingEngine.RequestType.MANIFEST || 
                      type === shaka.net.NetworkingEngine.RequestType.SEGMENT) && 
-                     request.uris[0] && !request.uris[0].includes('__hdnea=')) {
+                    request.uris[0] && !request.uris[0].includes('__hdnea=')) {
                     const separator = request.uris[0].includes('?') ? '&' : '?';
                     request.uris[0] += separator + cookieHeader;
                 }
@@ -112,17 +118,20 @@
                 }
             };
 
+            player.addEventListener('error', (event) => {
+                console.error('Shaka Player Error:', event.detail);
+            });
+
             try {
                 await player.load(streamUrl);
-                await attemptAutoplay();
+                if (video.readyState >= 3) {
+                    await attemptAutoplay();
+                } else {
+                    video.addEventListener('canplay', attemptAutoplay, { once: true });
+                }
             } catch (error) {
                 console.error('Load error:', error);
             }
-
-            // यूजर इंटरैक्शन पर साउंड चालू करना
-            ['click', 'touchstart'].forEach(event => {
-                document.addEventListener(event, () => { if(video.muted) video.muted = false; }, { once: true });
-            });
         });
     </script>
 </body>
