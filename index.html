@@ -8,10 +8,32 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css" crossorigin="anonymous">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { background: #000; height: 100vh; width: 100vw; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
-        .shaka-video-container { position: absolute; inset: 0; width: 100%; height: 100%; }
-        video { width: 100%; height: 100%; background: #000; object-fit: contain; }
-        .shaka-spinner-container, .shaka-spinner, .shaka-spinner-svg { display: none !important; visibility: hidden !important; opacity: 0 !important; }
+        html, body {
+            background: #000;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .shaka-video-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            object-fit: contain;
+        }
+        .shaka-spinner-container,
+        .shaka-spinner,
+        .shaka-spinner-svg {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
     </style>
 </head>
 <body>
@@ -22,7 +44,11 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             shaka.polyfill.installAll();
-            if (!shaka.Player.isBrowserSupported()) { return; }
+
+            if (!shaka.Player.isBrowserSupported()) {
+                console.error('Browser not supported');
+                return;
+            }
 
             const video = document.querySelector('video');
             const player = new shaka.Player();
@@ -32,25 +58,34 @@
             const ui = new shaka.ui.Overlay(player, container, video);
 
             ui.configure({
-                controlPanelElements: ['play_pause', 'time_and_duration', 'mute', 'volume', 'spacer', 'language', 'captions', 'picture_in_picture', 'quality', 'fullscreen'],
+                controlPanelElements: [
+                    'play_pause', 'time_and_duration', 'mute', 'volume',
+                    'spacer', 'language', 'captions', 'picture_in_picture',
+                    'quality', 'fullscreen'
+                ],
                 volumeBarColors: { base: 'purple', level: 'purple' },
                 seekBarColors: { base: 'gold', buffered: 'gold', played: 'gold' }
             });
 
-            // --- Updated DRM and Stream Info ---
+            // आपके द्वारा दिए गए नए DRM Keys और URL
             let drmConfig = {
                 clearKeys: {
                     "400131994b445d8c8817202248760fda": "2d56cb6f07a75b9aff165d534ae2bfc4"
                 }
             };
-            let cookieHeader = "__hdnea__=st=1771313762~exp=1771400162~acl=/*~hmac=55f2c8c60af3873042385ec7be2f3b769929e6aab945d6b593b4090149d7db4d";
-            let streamUrl = "https://jiotvmblive.cdn.jio.com/bpk-tv/Star_Sports_HD1_Hindi_BTS/output/index.mpd";
+            let cookieHeader = "__hdnea__=st=1771378562~exp=1771464962~acl=/*~hmac=637658f3ded9fab4136a8b09259f1f208afd98c184d8a4c8aadc03ad397f693b";
+            let streamUrl = "https://jiotvmblive.cdn.jio.com/bpk-tv/Star_Sports_HD1_Hindi_BTS/output/index.mpd?__hdnea__=st=1771378562~exp=1771464962~acl=/*~hmac=637658f3ded9fab4136a8b09259f1f208afd98c184d8a4c8aadc03ad397f693b";
 
             player.configure({
                 drm: drmConfig,
                 streaming: {
                     lowLatencyMode: true,
                     bufferingGoal: 15,
+                    rebufferingGoal: 2,
+                    bufferBehind: 15,
+                    retryParameters: { timeout: 10000, maxAttempts: 5, baseDelay: 300, backoffFactor: 1.2 },
+                    segmentRequestTimeout: 8000,
+                    segmentPrefetchLimit: 2,
                     useNativeHlsOnSafari: true
                 }
             });
@@ -61,25 +96,30 @@
                 request.headers['User-Agent'] = "plaYtv/7.1.3 (Linux;Android 13) ygx/824.1 ExoPlayerLib/824.0";
                 request.headers['Cookie'] = cookieHeader;
 
-                if ((type === shaka.net.NetworkingEngine.RequestType.MANIFEST || type === shaka.net.NetworkingEngine.RequestType.SEGMENT) && request.uris[0] && !request.uris[0].includes('__hdnea=')) {
+                if ((type === shaka.net.NetworkingEngine.RequestType.MANIFEST || 
+                     type === shaka.net.NetworkingEngine.RequestType.SEGMENT) && 
+                     request.uris[0] && !request.uris[0].includes('__hdnea=')) {
                     const separator = request.uris[0].includes('?') ? '&' : '?';
                     request.uris[0] += separator + cookieHeader;
                 }
             });
 
+            const attemptAutoplay = async () => {
+                try {
+                    video.muted = false;
+                    await video.play();
+                } catch (error) {
+                    video.muted = true;
+                    await video.play();
+                }
+            };
+
             try {
                 await player.load(streamUrl);
-                console.log('The video has now been loaded!');
-            } catch (e) {
-                console.error('Error code', e.code, 'object', e);
+                await attemptAutoplay();
+            } catch (error) {
+                console.error('Load error:', error);
             }
-
-            // Autoplay logic
-            video.addEventListener('play', () => {
-                if (window.self === window.top && !document.fullscreenElement && window.innerWidth <= 768) {
-                    container.requestFullscreen().catch(() => {});
-                }
-            }, { once: true });
         });
     </script>
 </body>
