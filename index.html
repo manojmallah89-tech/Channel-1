@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Star Sports HD1 Hindi</title>
+    <title>Star Sports 1 Hindi HD</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.ui.min.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css" crossorigin="anonymous">
     <style>
@@ -67,14 +67,16 @@
                 seekBarColors: { base: 'gold', buffered: 'gold', played: 'gold' }
             });
 
-            // आपके द्वारा दिए गए नए DRM Keys और URL
+            // अपडेटेड DRM ClearKeys
             let drmConfig = {
                 clearKeys: {
                     "400131994b445d8c8817202248760fda": "2d56cb6f07a75b9aff165d534ae2bfc4"
                 }
             };
-            let cookieHeader = "__hdnea__=st=1771378562~exp=1771464962~acl=/*~hmac=637658f3ded9fab4136a8b09259f1f208afd98c184d8a4c8aadc03ad397f693b";
-            let streamUrl = "https://jiotvmblive.cdn.jio.com/bpk-tv/Star_Sports_HD1_Hindi_BTS/output/index.mpd?__hdnea__=st=1771378562~exp=1771464962~acl=/*~hmac=637658f3ded9fab4136a8b09259f1f208afd98c184d8a4c8aadc03ad397f693b";
+
+            // अपडेटेड स्ट्रीम URL और हेडर्स
+            let streamUrl = "https://jiotvmblive.cdn.jio.com/bpk-tv/Star_Sports_HD1_Hindi_BTS/output/index.mpd";
+            let cookieHeader = "__hdnea__=st=1771486562~exp=1771572962~acl=/*~hmac=cf2f2e72bbd3a562758cb5cc6fc6e685a169899e366f6b460cd51d2ddf0085de";
 
             player.configure({
                 drm: drmConfig,
@@ -82,11 +84,7 @@
                     lowLatencyMode: true,
                     bufferingGoal: 15,
                     rebufferingGoal: 2,
-                    bufferBehind: 15,
-                    retryParameters: { timeout: 10000, maxAttempts: 5, baseDelay: 300, backoffFactor: 1.2 },
-                    segmentRequestTimeout: 8000,
-                    segmentPrefetchLimit: 2,
-                    useNativeHlsOnSafari: true
+                    retryParameters: { timeout: 10000, maxAttempts: 5 }
                 }
             });
 
@@ -98,7 +96,7 @@
 
                 if ((type === shaka.net.NetworkingEngine.RequestType.MANIFEST || 
                      type === shaka.net.NetworkingEngine.RequestType.SEGMENT) && 
-                     request.uris[0] && !request.uris[0].includes('__hdnea=')) {
+                    request.uris[0] && !request.uris[0].includes('__hdnea=')) {
                     const separator = request.uris[0].includes('?') ? '&' : '?';
                     request.uris[0] += separator + cookieHeader;
                 }
@@ -108,7 +106,7 @@
                 try {
                     video.muted = false;
                     await video.play();
-                } catch (error) {
+                } catch (e) {
                     video.muted = true;
                     await video.play();
                 }
@@ -118,7 +116,7 @@
                 await player.load(streamUrl);
                 await attemptAutoplay();
             } catch (error) {
-                console.error('Load error:', error);
+                console.error('Error loading stream:', error);
             }
         });
     </script>
