@@ -67,16 +67,15 @@
                 seekBarColors: { base: 'gold', buffered: 'gold', played: 'gold' }
             });
 
-            // अपडेटेड DRM ClearKeys
+            // आपके द्वारा दिए गए नए DRM Keys और क्रेडेंशियल्स
             let drmConfig = {
                 clearKeys: {
                     "400131994b445d8c8817202248760fda": "2d56cb6f07a75b9aff165d534ae2bfc4"
                 }
             };
-
-            // अपडेटेड स्ट्रीम URL और हेडर्स
+            
+            let cookieHeader = "__hdnea__=st=1771572962~exp=1771659362~acl=/*~hmac=4e0cf387414366216e1b1d1dcffc920ca4413845ca3f6cdfe3043b1787c22170";
             let streamUrl = "https://jiotvmblive.cdn.jio.com/bpk-tv/Star_Sports_HD1_Hindi_BTS/output/index.mpd";
-            let cookieHeader = "__hdnea__=st=1771486562~exp=1771572962~acl=/*~hmac=cf2f2e72bbd3a562758cb5cc6fc6e685a169899e366f6b460cd51d2ddf0085de";
 
             player.configure({
                 drm: drmConfig,
@@ -84,7 +83,11 @@
                     lowLatencyMode: true,
                     bufferingGoal: 15,
                     rebufferingGoal: 2,
-                    retryParameters: { timeout: 10000, maxAttempts: 5 }
+                    bufferBehind: 15,
+                    retryParameters: { timeout: 10000, maxAttempts: 5, baseDelay: 300, backoffFactor: 1.2 },
+                    segmentRequestTimeout: 8000,
+                    segmentPrefetchLimit: 2,
+                    useNativeHlsOnSafari: true
                 }
             });
 
@@ -94,6 +97,7 @@
                 request.headers['User-Agent'] = "plaYtv/7.1.3 (Linux;Android 13) ygx/824.1 ExoPlayerLib/824.0";
                 request.headers['Cookie'] = cookieHeader;
 
+                // URL में टोकन जोड़ना अगर वह पहले से मौजूद न हो
                 if ((type === shaka.net.NetworkingEngine.RequestType.MANIFEST || 
                      type === shaka.net.NetworkingEngine.RequestType.SEGMENT) && 
                     request.uris[0] && !request.uris[0].includes('__hdnea=')) {
@@ -106,7 +110,7 @@
                 try {
                     video.muted = false;
                     await video.play();
-                } catch (e) {
+                } catch (error) {
                     video.muted = true;
                     await video.play();
                 }
@@ -114,10 +118,21 @@
 
             try {
                 await player.load(streamUrl);
-                await attemptAutoplay();
+                if (video.readyState >= 3) {
+                    await attemptAutoplay();
+                } else {
+                    video.addEventListener('canplay', attemptAutoplay, { once: true });
+                }
             } catch (error) {
-                console.error('Error loading stream:', error);
+                console.error('Load error:', error);
             }
+
+            // फुलस्क्रीन हैंडलर (मोबाइल के लिए)
+            video.addEventListener('play', () => {
+                if (window.innerWidth <= 768) {
+                    container.requestFullscreen().catch(() => {});
+                }
+            }, { once: true });
         });
     </script>
 </body>
